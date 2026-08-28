@@ -1,0 +1,164 @@
+{
+  "cases": [
+    {
+      "case_id": "EMP101",
+      "name": "Alex Tan",
+      "role": "Software Engineer",
+      "tenure_years": 2,
+      "department": "Product Engineering",
+      "review_period": "Jan 2025 – Dec 2025",
+      "performance_scores": {
+        "performance_quality": 4.3,
+        "guest_experience": 4.0,
+        "team_collaboration": 4.1,
+        "communication": 3.2,
+        "initiative_ownership": 4.2
+      },
+      "profile_summary": "Alex helps improve the company’s digital services by fixing problems, adding useful improvements, and making sure the work is reliable. Alex delivers strong work and has taken on more responsibility, but is still building confidence speaking in group meetings.",
+      "goals": [
+        {
+          "goal": "Complete assigned work on time and with few avoidable errors",
+          "status": "Completed",
+          "notes": "Completed 92% of assigned work within the planned work period. No serious problems were reported after the work went live. Alex also helped resolve two urgent issues during a major service disruption in Q3."
+        },
+        {
+          "goal": "Help check colleagues’ work before it is released",
+          "status": "Completed",
+          "notes": "Led the checking process for part of the payment service for two quarters. Alex identified several possible problems before release and gave clear, constructive feedback to colleagues."
+        },
+        {
+          "goal": "Give clear spoken updates during team meetings",
+          "status": "Partially Met",
+          "notes": "Alex gave written updates regularly but often asked the team lead to give spoken updates, especially when work was delayed or facing problems."
+        }
+      ],
+      "peer_feedback": [
+        "Alex is the person I ask for help when a customer problem is difficult to understand. They ask useful questions and usually find the cause quickly.",
+        "Alex checks work carefully and gives feedback in a respectful way. They explain why a change would help, not just what needs changing.",
+        "In team meetings, Alex often gives only a short update and lets others explain the details, even when Alex knows the issue very well."
+      ],
+      "manager_notes": "Alex is dependable and has shown more ownership, especially in work related to the payment service. The main development area is speaking more confidently about progress, risks, and delays in group meetings. Alex’s written communication is strong.",
+      "performance_consistency": "Alex’s work quality was steady throughout the year. There were no missed deadlines or serious quality problems recorded."
+    },
+    {
+      "case_id": "EMP102",
+      "name": "Priya Nair",
+      "role": "Marketing Associate",
+      "tenure_years": 8,
+      "department": "Brand Marketing",
+      "review_period": "Jan 2025 – Dec 2025",
+      "performance_scores": {
+        "performance_quality": 3.8,
+        "guest_experience": 3.9,
+        "team_collaboration": 4.3,
+        "communication": 3.9,
+        "initiative_ownership": 2.7
+      },
+      "profile_summary": "Priya is an experienced marketing colleague who delivers reliable campaigns that follow brand standards. However, Priya did not take up opportunities to try new approaches or actively support less-experienced colleagues this year.",
+      "goals": [
+        {
+          "goal": "Deliver planned marketing campaigns on time and within budget",
+          "status": "Completed",
+          "notes": "Delivered all four planned campaigns on time and within budget. Priya used familiar formats and channels from previous years, with small updates where needed."
+        },
+        {
+          "goal": "Actively support at least one newer colleague with campaign planning",
+          "status": "Partially Met",
+          "notes": "Priya answered questions when newer colleagues asked, but did not arrange regular check-ins or offer to guide them through the planning process."
+        },
+        {
+          "goal": "Try at least one new way to reach customers",
+          "status": "Not Met",
+          "notes": "Priya chose not to lead a short video trial in Q2 and did not join a trial involving online content creators in Q4. On both occasions, Priya preferred to focus on the usual campaign work."
+        }
+      ],
+      "peer_feedback": [
+        "If Priya runs a campaign, it will be on time and follow the brand standards closely. She knows the usual process very well.",
+        "Priya answers questions when asked, but she does not usually offer to guide newer people through campaign planning.",
+        "Priya was asked twice to take part in new trials that suited her experience, but she chose to focus on her usual campaign work instead."
+      ],
+      "manager_notes": "Priya is reliable and experienced in delivering established campaigns. The main development area is taking on work beyond familiar methods. Priya was offered two specific opportunities to try new approaches and did not take either one. Support for newer colleagues has also been responsive rather than proactive.",
+      "performance_consistency": "Priya was consistently reliable in her usual responsibilities, with no quality or deadline problems. Her contribution did not expand beyond established ways of working during the year."
+    },
+    {
+      "case_id": "EMP103",
+      "name": "Daniel Ong",
+      "role": "Customer Support Specialist",
+      "tenure_years": 1,
+      "department": "Customer Experience",
+      "review_period": "Jan 2025 – Dec 2025",
+      "performance_scores": {
+        "performance_quality": 4.4,
+        "guest_experience": 4.6,
+        "team_collaboration": 3.0,
+        "communication": 3.9,
+        "initiative_ownership": 2.6
+      },
+      "profile_summary": "Daniel is a newer employee who solves customer problems quickly and receives very positive customer feedback. Daniel has focused mainly on individual customer requests and has contributed less to team improvement activities.",
+      "goals": [
+        {
+          "goal": "Respond to assigned customer requests within two hours",
+          "status": "Completed",
+          "notes": "Daniel gave a first response in an average of 54 minutes across the year, placing him among the faster members of the team."
+        },
+        {
+          "goal": "Maintain customer satisfaction above 90%",
+          "status": "Completed",
+          "notes": "Daniel finished the year with 94% customer satisfaction. Several customers specifically praised his patience and clear explanations."
+        },
+        {
+          "goal": "Create at least two helpful guides for common customer problems",
+          "status": "Not Met",
+          "notes": "Daniel identified two repeated customer problems that could have been turned into team guides, but did not write or submit either guide because he preferred to focus on answering customer requests."
+        }
+      ],
+      "peer_feedback": [
+        "Daniel is quick to respond and customers appreciate his help. Some of our strongest customer feedback mentioned him by name.",
+        "When we ask Daniel for help with a difficult customer issue, he is generous with his time and explains his thinking clearly.",
+        "Daniel mainly works through his own customer requests and does not often join team discussions about improving shared processes or creating helpful guides."
+      ],
+      "manager_notes": "Daniel performed very strongly in his first year on response time and customer satisfaction. The main development area is contributing more to improvements that help the whole team, not only the customers assigned directly to him.",
+      "performance_consistency": "Daniel’s individual results were consistently strong throughout the year. His involvement in team-wide improvement activities remained limited."
+    },
+    {
+      "case_id": "EMP104",
+      "name": "Farah Rahman",
+      "role": "Project Coordinator",
+      "tenure_years": 4,
+      "department": "Operations",
+      "review_period": "Jan 2025 – Dec 2025",
+      "performance_scores": {
+        "performance_quality": 3.9,
+        "guest_experience": 4.0,
+        "team_collaboration": 4.4,
+        "communication": 4.3,
+        "initiative_ownership": 3.8
+      },
+      "profile_summary": "Farah returned to a full workload after a period of reduced working hours. She steadily rebuilt her capacity and confidence during the year while continuing to work very well with colleagues.",
+      "goals": [
+        {
+          "goal": "Return to a full workload by Q3",
+          "status": "Completed",
+          "notes": "Farah increased from supporting two projects at the same time to five by Q3, as planned. She did not miss any deadlines during this transition."
+        },
+        {
+          "goal": "Build confidence leading meetings involving different teams",
+          "status": "Completed",
+          "notes": "Farah led meetings together with a colleague in Q1 and Q2, then led the weekly meetings independently from Q3. Colleagues gave positive feedback on how clear and well-paced the meetings were."
+        },
+        {
+          "goal": "Meet the manager monthly to discuss workload and pace",
+          "status": "Completed",
+          "notes": "Farah attended regular monthly check-ins and raised concerns early when a deadline felt difficult, rather than waiting until it became a larger problem."
+        }
+      ],
+      "peer_feedback": [
+        "Farah pays attention to how the team is coping as well as to the project plan. She often notices when someone has too much work before they say so.",
+        "Farah became more confident leading meetings as the year progressed. By the final quarter, she was leading them very effectively.",
+        "Farah is organised and follows up on agreed actions, which helps projects involving different teams run more smoothly."
+      ],
+      "manager_notes": "Farah returned to a full workload steadily, with no setbacks, while remaining a strong team colleague. Her confidence and ownership in leading meetings grew clearly across the year.",
+      "performance_consistency": "Farah showed steady improvement throughout the year and remained reliable. Her confidence and visible ownership grew gradually over time."
+    }
+  ]
+}
