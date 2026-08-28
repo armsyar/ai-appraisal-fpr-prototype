@@ -28,9 +28,11 @@ import os
 import streamlit as st
 
 FIELDNAMES = [
-    "case_id", "employee_name", "condition", "time_seconds", "summary_text",
+    "case_id", "employee_name", "condition", "summary_text",
     "clarity", "specificity", "balance", "tone", "accuracy",
     "unsupported_claim_flag", "rubric_notes",
+    "fairness", "trust", "usefulness", "transparency",
+    "open_fairness", "open_trust",
 ]
 
 

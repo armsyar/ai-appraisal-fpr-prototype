@@ -1,7 +1,6 @@
 import streamlit as st
 import anthropic
 import json
-import time
 
 from prompt_template import APPRAISAL_SYSTEM_PROMPT, build_user_prompt
 from storage import save_response
@@ -73,7 +72,7 @@ current_signature = f"{case['case_id']}_{condition}"
 
 if st.session_state.get("current_signature") != current_signature:
     st.session_state["current_signature"] = current_signature
-    for key in ["last_output", "last_elapsed", "last_case", "last_case_id", "manual_start"]:
+    for key in ["last_output", "last_case", "last_case_id"]:
         if key in st.session_state:
             del st.session_state[key]
 
@@ -122,9 +121,6 @@ with col2:
             "This ensures both conditions produce comparable outputs."
         )
 
-        if "manual_start" not in st.session_state:
-            st.session_state["manual_start"] = time.time()
-
         st.markdown(
             f"""## Annual Performance Appraisal Summary
 **Name:** {case['name']} | **Role:** {case['role']} | **Department:** {case['department']} | **Review Period:** {case['review_period']}"""
@@ -167,30 +163,26 @@ with col2:
         )
 
         st.divider()
-        st.subheader("📋 Rubric Rating Form (Manual)")
+        st.subheader("📋 Participant Questionnaire")
         st.caption(
-            "Read the case first, then rate the summary you wrote using the rubric below "
-            "(1 = weakest, 5 = strongest)."
+            "Rate the summary you just wrote "
+            "(1 = Strongly Disagree, 5 = Strongly Agree)."
         )
-
-        st.caption(
-                    "**Unsupported claim flag:** Mark **Yes** if the summary introduces at least one factual claim not traceable to the synthetic case."
-                )
 
         q_clarity = st.slider(
-            "Clarity — Easy to understand, well-structured, and coherent", 1, 5, 3, key="manual_clarity"
+            "Clarity — The summary is easy to understand", 1, 5, 3, key="manual_clarity"
         )
         q_specificity = st.slider(
-            "Specificity — Uses concrete case evidence rather than vague statements", 1, 5, 3, key="manual_specificity"
+            "Specificity — The summary references specific evidence", 1, 5, 3, key="manual_specificity"
         )
         q_balance = st.slider(
-            "Balance — Represents strengths and development areas fairly relative to the evidence", 1, 5, 3, key="manual_balance"
+            "Balance — Fairly represents strengths and development areas", 1, 5, 3, key="manual_balance"
         )
         q_tone = st.slider(
-            "Tone — Professional, respectful, and appropriate for HR appraisal use", 1, 5, 3, key="manual_tone"
+            "Tone — The language is professional and appropriate", 1, 5, 3, key="manual_tone"
         )
         q_accuracy = st.slider(
-            "Accuracy — Faithful to the case evidence without unsupported claims", 1, 5, 3, key="manual_accuracy"
+            "Accuracy — The summary is faithful to the case evidence, without unsupported claims", 1, 5, 3, key="manual_accuracy"
         )
         q_unsupported_claim = st.radio(
             "Unsupported claim flag — Does the summary introduce any factual claim not present in the synthetic case?",
@@ -200,13 +192,34 @@ with col2:
         )
         q_notes = st.text_area(
             "Notes on unsupported claims or major omissions (optional)",
-            height=90,
+            height=70,
             key="manual_rubric_notes"
+        )
+        q_fairness = st.slider(
+            "Fairness — The summary feels fair to the employee", 1, 5, 3, key="manual_fairness"
+        )
+        q_trust = st.slider(
+            "Trust — I would trust this to inform an appraisal decision", 1, 5, 3, key="manual_trust"
+        )
+        q_usefulness = st.slider(
+            "Usefulness — Writing this summary this way meaningfully supports me in appraisal writing",
+            1, 5, 3, key="manual_usefulness"
+        )
+        q_transparency = st.slider(
+            "Transparency — It is clear to me how this summary was derived from the evidence", 1, 5, 3, key="manual_transparency"
+        )
+        q_open_fairness = st.text_area(
+            "What made this summary feel fair or unfair?",
+            height=70,
+            key="manual_open_fairness"
+        )
+        q_open_trust = st.text_area(
+            "What would increase your trust in this process?",
+            height=70,
+            key="manual_open_trust"
         )
 
         if st.button("✅ Submit Manual Summary", use_container_width=True):
-            elapsed = time.time() - st.session_state["manual_start"]
-
             summary_text = f"""## Annual Performance Appraisal Summary
 **Name:** {case['name']} | **Role:** {case['role']} | **Department:** {case['department']} | **Review Period:** {case['review_period']}
 
@@ -228,7 +241,6 @@ with col2:
                 "case_id": case["case_id"],
                 "employee_name": case["name"],
                 "condition": "Manual",
-                "time_seconds": round(elapsed, 2),
                 "summary_text": summary_text,
                 "clarity": q_clarity,
                 "specificity": q_specificity,
@@ -237,12 +249,17 @@ with col2:
                 "accuracy": q_accuracy,
                 "unsupported_claim_flag": q_unsupported_claim,
                 "rubric_notes": q_notes,
+                "fairness": q_fairness,
+                "trust": q_trust,
+                "usefulness": q_usefulness,
+                "transparency": q_transparency,
+                "open_fairness": q_open_fairness,
+                "open_trust": q_open_trust,
             }
 
             save_response(ratings)
 
-            st.success(f"✅ Submitted! Time taken: **{elapsed/60:.1f} minutes**")
-            del st.session_state["manual_start"]
+            st.success("✅ Submitted! Thank you.")
 
     else:
         if not api_key:
@@ -253,7 +270,6 @@ with col2:
         else:
             if st.button("🤖 Generate AI Summary", type="primary", use_container_width=True):
                 with st.spinner("Generating appraisal summary..."):
-                    start = time.time()
                     try:
                         client = anthropic.Anthropic(api_key=api_key)
                         message = client.messages.create(
@@ -265,17 +281,13 @@ with col2:
                             ],
                         )
                         st.session_state["last_output"] = message.content[0].text
-                        st.session_state["last_elapsed"] = time.time() - start
                         st.session_state["last_case"] = case["name"]
                         st.session_state["last_case_id"] = case["case_id"]
                     except Exception as e:
                         st.error(f"API error: {e}")
 
             if "last_output" in st.session_state:
-                st.success(
-                    f"Generated in {st.session_state['last_elapsed']:.1f}s "
-                    f"for {st.session_state['last_case']}"
-                )
+                st.success(f"Generated draft for {st.session_state['last_case']}")
 
                 output = st.session_state["last_output"]
 
@@ -293,30 +305,26 @@ with col2:
                 )
 
                 st.divider()
-                st.subheader("📋 Rubric Rating Form")
+                st.subheader("📋 Participant Questionnaire")
                 st.caption(
-                    "Rate the AI-generated summary using the same rubric used for manual summaries "
-                    "(1 = weakest, 5 = strongest)."
-                )
-
-                st.caption(
-                    "**Unsupported claim flag:** Mark **Yes** if the summary introduces at least one factual claim not traceable to the synthetic case."
+                    "Rate the AI-generated draft you just reviewed "
+                    "(1 = Strongly Disagree, 5 = Strongly Agree)."
                 )
 
                 q_clarity = st.slider(
-                    "Clarity — Easy to understand, well-structured, and coherent", 1, 5, 3, key="ai_clarity"
+                    "Clarity — The summary is easy to understand", 1, 5, 3, key="ai_clarity"
                 )
                 q_specificity = st.slider(
-                    "Specificity — Uses concrete case evidence rather than vague statements", 1, 5, 3, key="ai_specificity"
+                    "Specificity — The summary references specific evidence", 1, 5, 3, key="ai_specificity"
                 )
                 q_balance = st.slider(
-                    "Balance — Represents strengths and development areas fairly relative to the evidence", 1, 5, 3, key="ai_balance"
+                    "Balance — Fairly represents strengths and development areas", 1, 5, 3, key="ai_balance"
                 )
                 q_tone = st.slider(
-                    "Tone — Professional, respectful, and appropriate for HR appraisal use", 1, 5, 3, key="ai_tone"
+                    "Tone — The language is professional and appropriate", 1, 5, 3, key="ai_tone"
                 )
                 q_accuracy = st.slider(
-                    "Accuracy — Faithful to the case evidence without unsupported claims", 1, 5, 3, key="ai_accuracy"
+                    "Accuracy — The summary is faithful to the case evidence, without unsupported claims", 1, 5, 3, key="ai_accuracy"
                 )
                 q_unsupported_claim = st.radio(
                     "Unsupported claim flag — Does the summary introduce any factual claim not present in the synthetic case?",
@@ -326,8 +334,31 @@ with col2:
                 )
                 q_notes = st.text_area(
                     "Notes on unsupported claims or major omissions (optional)",
-                    height=90,
+                    height=70,
                     key="ai_rubric_notes"
+                )
+                q_fairness = st.slider(
+                    "Fairness — The summary feels fair to the employee", 1, 5, 3, key="ai_fairness"
+                )
+                q_trust = st.slider(
+                    "Trust — I would trust this to inform an appraisal decision", 1, 5, 3, key="ai_trust"
+                )
+                q_usefulness = st.slider(
+                    "Usefulness — This tool meaningfully supports me in writing appraisals",
+                    1, 5, 3, key="ai_usefulness"
+                )
+                q_transparency = st.slider(
+                    "Transparency — I understand how this summary was generated", 1, 5, 3, key="ai_transparency"
+                )
+                q_open_fairness = st.text_area(
+                    "What made this summary feel fair or unfair?",
+                    height=70,
+                    key="ai_open_fairness"
+                )
+                q_open_trust = st.text_area(
+                    "What would increase your trust in this tool?",
+                    height=70,
+                    key="ai_open_trust"
                 )
 
                 if st.button("📨 Submit Ratings", use_container_width=True):
@@ -335,7 +366,6 @@ with col2:
                         "case_id": st.session_state["last_case_id"],
                         "employee_name": st.session_state["last_case"],
                         "condition": "AI-Assisted",
-                        "time_seconds": round(st.session_state["last_elapsed"], 2),
                         "summary_text": st.session_state["last_output"],
                         "clarity": q_clarity,
                         "specificity": q_specificity,
@@ -344,6 +374,12 @@ with col2:
                         "accuracy": q_accuracy,
                         "unsupported_claim_flag": q_unsupported_claim,
                         "rubric_notes": q_notes,
+                        "fairness": q_fairness,
+                        "trust": q_trust,
+                        "usefulness": q_usefulness,
+                        "transparency": q_transparency,
+                        "open_fairness": q_open_fairness,
+                        "open_trust": q_open_trust,
                     }
 
                     save_response(ratings)
