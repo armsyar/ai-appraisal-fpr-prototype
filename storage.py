@@ -28,11 +28,9 @@ import os
 import streamlit as st
 
 FIELDNAMES = [
-    "participant_id", "nationality", "years_experience", "is_former_manager",
-    "prior_ai_usage", "order", "case_id", "employee_name", "condition",
-    "time_seconds", "summary_text", "clarity", "specificity", "balance",
-    "tone", "accuracy", "unsupported_claim_flag", "fairness", "trust",
-    "usefulness", "transparency", "retained_control", "rubric_notes",
+    "case_id", "employee_name", "condition", "time_seconds", "summary_text",
+    "clarity", "specificity", "balance", "tone", "accuracy",
+    "unsupported_claim_flag", "rubric_notes",
 ]
 
 

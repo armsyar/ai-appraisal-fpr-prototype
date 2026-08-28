@@ -28,35 +28,21 @@ case_map = {
 with st.sidebar:
     st.title("⚙️ Settings")
 
-    api_key = st.secrets.get("ANTHROPIC_API_KEY", "")
-
-    st.divider()
-    st.markdown("**Participant Profile** *(complete once per participant, before their first task)*")
-    participant_id = st.text_input(
-        "Anonymous participant code (e.g. P01)",
-        key="participant_id",
-        help="Assign this code at recruitment. Do not use a real name or employee ID.",
-    )
-    nationality = st.selectbox(
-        "Nationality / primary work location",
-        ["Singaporean", "Australian", "American", "British", "Malaysian", "Indian", "Other"],
-        key="nationality",
-    )
-    years_experience = st.number_input(
-        "Years of appraisal-writing experience",
-        min_value=0, max_value=50, value=0, step=1,
-        key="years_experience",
-    )
-    is_former_manager = st.radio(
-        "Current or former line manager?",
-        ["Current line manager", "Former line manager"],
-        key="is_former_manager",
-    )
-    prior_ai_usage = st.radio(
-        "Prior use of generative-AI tools (e.g. ChatGPT, Claude)?",
-        ["No", "Yes"],
-        key="prior_ai_usage",
-    )
+    _secret_key = st.secrets.get("ANTHROPIC_API_KEY", "")
+    if _secret_key:
+        # A shared key is configured on the server (e.g. deployed on Streamlit
+        # Community Cloud) - use it directly and never show a key field to
+        # the participant.
+        api_key = _secret_key
+    else:
+        # No server-side secret configured (e.g. running locally on a laptop
+        # without .streamlit/secrets.toml set up) - fall back to the original
+        # manual entry field so local testing keeps working.
+        api_key = st.text_input(
+            "Anthropic API Key",
+            type="password",
+            help="Get yours at https://console.anthropic.com/",
+        )
 
     st.divider()
     st.markdown("**Study Condition**")
@@ -66,13 +52,6 @@ with st.sidebar:
         index=0
     )
     st.caption("Set to Manual for the control condition. AI generation will be disabled.")
-
-    task_order = st.radio(
-        "Order of this task for this participant",
-        ["1st", "2nd"],
-        key="task_order",
-        help="Counterbalancing check: was this the participant's first or second task in the session?",
-    )
 
 st.title("📋 AI Appraisal Drafting Assistant")
 st.markdown(
@@ -225,28 +204,6 @@ with col2:
             key="manual_rubric_notes"
         )
 
-        st.divider()
-        st.subheader("🤝 Perception Questionnaire")
-        st.caption(
-            "Now think about the process of producing this summary, not just the text itself. "
-            "Rate each statement from 1 (strongly disagree) to 5 (strongly agree)."
-        )
-        q_fairness = st.slider(
-            "Fairness — This process produced a fair representation of the employee's performance", 1, 5, 3, key="manual_fairness"
-        )
-        q_trust = st.slider(
-            "Trust — I trust the accuracy and judgement reflected in this summary", 1, 5, 3, key="manual_trust"
-        )
-        q_usefulness = st.slider(
-            "Usefulness — This process was useful for producing an appraisal summary", 1, 5, 3, key="manual_usefulness"
-        )
-        q_transparency = st.slider(
-            "Transparency — It was clear to me how this summary was derived from the underlying evidence", 1, 5, 3, key="manual_transparency"
-        )
-        q_retained_control = st.slider(
-            "Retained control — I felt I retained control over the final content of this summary", 1, 5, 3, key="manual_retained_control"
-        )
-
         if st.button("✅ Submit Manual Summary", use_container_width=True):
             elapsed = time.time() - st.session_state["manual_start"]
 
@@ -268,12 +225,6 @@ with col2:
 *This draft is intended for manager review and editing and does not constitute a final appraisal decision.*"""
 
             ratings = {
-                "participant_id": participant_id,
-                "nationality": nationality,
-                "years_experience": years_experience,
-                "is_former_manager": is_former_manager,
-                "prior_ai_usage": prior_ai_usage,
-                "order": task_order,
                 "case_id": case["case_id"],
                 "employee_name": case["name"],
                 "condition": "Manual",
@@ -285,11 +236,6 @@ with col2:
                 "tone": q_tone,
                 "accuracy": q_accuracy,
                 "unsupported_claim_flag": q_unsupported_claim,
-                "fairness": q_fairness,
-                "trust": q_trust,
-                "usefulness": q_usefulness,
-                "transparency": q_transparency,
-                "retained_control": q_retained_control,
                 "rubric_notes": q_notes,
             }
 
@@ -384,36 +330,8 @@ with col2:
                     key="ai_rubric_notes"
                 )
 
-                st.divider()
-                st.subheader("🤝 Perception Questionnaire")
-                st.caption(
-                    "Now think about the process of producing this summary, not just the text itself. "
-                    "Rate each statement from 1 (strongly disagree) to 5 (strongly agree)."
-                )
-                q_fairness = st.slider(
-                    "Fairness — This process produced a fair representation of the employee's performance", 1, 5, 3, key="ai_fairness"
-                )
-                q_trust = st.slider(
-                    "Trust — I trust the accuracy and judgement reflected in this summary", 1, 5, 3, key="ai_trust"
-                )
-                q_usefulness = st.slider(
-                    "Usefulness — This process was useful for producing an appraisal summary", 1, 5, 3, key="ai_usefulness"
-                )
-                q_transparency = st.slider(
-                    "Transparency — It was clear to me how this summary was derived from the underlying evidence", 1, 5, 3, key="ai_transparency"
-                )
-                q_retained_control = st.slider(
-                    "Retained control — I felt I retained control over the final content of this summary", 1, 5, 3, key="ai_retained_control"
-                )
-
                 if st.button("📨 Submit Ratings", use_container_width=True):
                     ratings = {
-                        "participant_id": participant_id,
-                        "nationality": nationality,
-                        "years_experience": years_experience,
-                        "is_former_manager": is_former_manager,
-                        "prior_ai_usage": prior_ai_usage,
-                        "order": task_order,
                         "case_id": st.session_state["last_case_id"],
                         "employee_name": st.session_state["last_case"],
                         "condition": "AI-Assisted",
@@ -425,11 +343,6 @@ with col2:
                         "tone": q_tone,
                         "accuracy": q_accuracy,
                         "unsupported_claim_flag": q_unsupported_claim,
-                        "fairness": q_fairness,
-                        "trust": q_trust,
-                        "usefulness": q_usefulness,
-                        "transparency": q_transparency,
-                        "retained_control": q_retained_control,
                         "rubric_notes": q_notes,
                     }
 
