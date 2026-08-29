@@ -260,6 +260,7 @@ with col2:
 
             save_response(ratings)
 
+            storage_location = save_response(ratings)
             st.success("✅ Submitted! Thank you.")
 
     else:
@@ -396,6 +397,7 @@ with col2:
 
                     save_response(ratings)
 
+                    storage_location = save_response(ratings)
                     st.success("✅ Ratings saved! Thank you.")
 
 st.divider()
