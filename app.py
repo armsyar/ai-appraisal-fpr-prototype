@@ -267,11 +267,21 @@ with col2:
                 "AI-Assisted condition is temporarily unavailable (no API key configured on the server). "
                 "Please let the researcher know, or switch to Manual condition."
             )
+        elif not workspace_id:
+            st.error(
+                "AI_Assisted condition is temporarily unavailable because the researcher server configuration is incomplete. "
+                "Please let the researcher now, or switch to Manual condition."
         else:
             if st.button("🤖 Generate AI Summary", type="primary", use_container_width=True):
                 with st.spinner("Generating appraisal summary..."):
                     try:
-                        client = anthropic.Anthropic(api_key=api_key)
+                        client = anthropic.Anthropic(
+                            api_key=api_key,
+                            default_headers={
+                                "anthropic-workspace-id": workspace_id
+                            } if workspace_id else None,
+                        )
+                        
                         message = client.messages.create(
                             model="claude-sonnet-4-6",
                             max_tokens=1024,
