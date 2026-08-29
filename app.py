@@ -271,6 +271,7 @@ with col2:
             st.error(
                 "AI_Assisted condition is temporarily unavailable because the researcher server configuration is incomplete. "
                 "Please let the researcher now, or switch to Manual condition."
+            )
         else:
             if st.button("🤖 Generate AI Summary", type="primary", use_container_width=True):
                 with st.spinner("Generating appraisal summary..."):
