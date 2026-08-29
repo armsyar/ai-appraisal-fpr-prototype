@@ -73,9 +73,9 @@ current_signature = f"{case['case_id']}_{condition}"
 
 if st.session_state.get("current_signature") != current_signature:
     st.session_state["current_signature"] = current_signature
+    
     for key in ["last_output", "last_case", "last_case_id"]:
-        if key in st.session_state:
-            del st.session_state[key]
+        st.session_state.pop(key, None)
 
 col1, col2 = st.columns([1, 1], gap="large")
 
@@ -258,8 +258,6 @@ with col2:
                 "open_trust": q_open_trust,
             }
 
-            save_response(ratings)
-
             storage_location = save_response(ratings)
             st.success("✅ Submitted! Thank you.")
 
@@ -395,8 +393,7 @@ with col2:
                         "open_trust": q_open_trust,
                     }
 
-                    save_response(ratings)
-
+                   
                     storage_location = save_response(ratings)
                     st.success("✅ Ratings saved! Thank you.")
 
