@@ -1,3 +1,5 @@
+import uuid
+
 import streamlit as st
 import anthropic
 import json
@@ -19,10 +21,28 @@ def load_cases():
 
 
 cases = load_cases()
-case_map = {
-    f"{c['name']} — {c['case_id']} — {c['role']} ({c['department']})": c
+case_map = {c["case_id"]: c for c in cases}
+case_label = {
+    c["case_id"]: f"{c['name']} — {c['case_id']} — {c['role']} ({c['department']})"
     for c in cases
 }
+
+# --- Participant session identity (non-identifying pairing code only) ---
+# Generated once per browser session. Used ONLY so the analysis can pair a
+# given participant's AI-Assisted and Manual responses on the same case
+# together (a within-subjects / repeated-measures design). It is not a
+# name, login, email address, or any other personally identifying value,
+# and it is never shown to anyone but the participant themselves.
+if "participant_session_id" not in st.session_state:
+    st.session_state["participant_session_id"] = uuid.uuid4().hex[:10]
+
+# --- Per-case progress tracking ---
+# case_progress[case_id] = {"ai_done": bool, "manual_done": bool, "ai_output": str|None}
+if "case_progress" not in st.session_state:
+    st.session_state["case_progress"] = {
+        c["case_id"]: {"ai_done": False, "manual_done": False, "ai_output": None}
+        for c in cases
+    }
 
 with st.sidebar:
     st.title("⚙️ Settings")
@@ -45,13 +65,12 @@ with st.sidebar:
         )
 
     st.divider()
-    st.markdown("**Study Condition**")
-    condition = st.radio(
-        "Participant condition",
-        ["AI-Assisted", "Manual"],
-        index=0
+    st.caption(
+        f"Session pairing code: `{st.session_state['participant_session_id']}` "
+        "— a random, non-identifying code used only to link your own "
+        "responses across the steps and cases you complete. It is not "
+        "your name, login, or any other personal information."
     )
-    st.caption("Set to Manual for the control condition. AI generation will be disabled.")
 
 st.title("📋 AI Appraisal Drafting Assistant")
 st.markdown(
@@ -63,19 +82,65 @@ st.markdown(
 st.info(
     "This prototype uses synthetic employee cases only and avoids protected attributes. "
     "It is designed to study appraisal summary quality, evidence-faithfulness, fairness, and human oversight "
-    "in AI-assisted appraisals."
+    "in AI-assisted appraisals. For each case you choose, you will first generate an AI-Assisted summary and "
+    "rate it, then write your own Manual summary for the same case and self-rate it."
 )
 
-selected_label = st.selectbox("Select Employee Case", list(case_map.keys()))
-case = case_map[selected_label]
+# --- Progress overview across all four cases ---
+st.subheader("📊 Your progress")
+progress_cols = st.columns(len(cases))
+for col, c in zip(progress_cols, cases):
+    prog = st.session_state["case_progress"][c["case_id"]]
+    if prog["ai_done"] and prog["manual_done"]:
+        status = "✅ Done"
+    elif prog["ai_done"] or prog["manual_done"]:
+        status = "🟡 In progress"
+    else:
+        status = "⬜ Not started"
+    with col:
+        st.markdown(f"**{c['case_id']}**  \n{c['name']}  \n{status}")
 
-current_signature = f"{case['case_id']}_{condition}"
+completed_cases = [
+    cid for cid, p in st.session_state["case_progress"].items()
+    if p["ai_done"] and p["manual_done"]
+]
+in_progress_cases = [
+    cid for cid, p in st.session_state["case_progress"].items()
+    if (p["ai_done"] or p["manual_done"]) and not (p["ai_done"] and p["manual_done"])
+]
 
-if st.session_state.get("current_signature") != current_signature:
-    st.session_state["current_signature"] = current_signature
-    
-    for key in ["last_output", "last_case", "last_case_id"]:
-        st.session_state.pop(key, None)
+st.divider()
+
+if len(completed_cases) == len(cases):
+    st.success(
+        "🎉 You have completed all four synthetic cases. Thank you very much for taking part! "
+        "You do not need to do anything else — you may close this window."
+    )
+    st.stop()
+
+if len(completed_cases) >= 1 and not in_progress_cases:
+    st.info(
+        f"You have completed {len(completed_cases)} of 4 case(s). You have met the minimum "
+        "requirement to take part — you may stop here, or continue with another case below "
+        "if you have the time and interest to do so."
+    )
+
+# Cases still available to select: anything not yet fully completed.
+available_case_ids = [c["case_id"] for c in cases if c["case_id"] not in completed_cases]
+
+# If a case is already in progress (AI done, manual not done), default to it
+# rather than letting the participant wander to a fresh case mid-task.
+default_case_id = in_progress_cases[0] if in_progress_cases else available_case_ids[0]
+default_index = available_case_ids.index(default_case_id)
+
+selected_case_id = st.selectbox(
+    "Select a synthetic employee case to work on",
+    available_case_ids,
+    index=default_index,
+    format_func=lambda cid: case_label[cid],
+)
+case = case_map[selected_case_id]
+progress = st.session_state["case_progress"][selected_case_id]
 
 col1, col2 = st.columns([1, 1], gap="large")
 
@@ -113,13 +178,172 @@ with col1:
     with st.expander("📝 Manager Notes", expanded=False):
         st.warning(f'"{case["manager_notes"]}"')
 
-with col2:
-    st.subheader("✍️ Appraisal Summary Output")
 
-    if condition == "Manual":
+def render_questionnaire(key_prefix: str, subject_caption: str) -> dict:
+    """
+    Renders the combined Participant Questionnaire (quality rubric +
+    perception measures + open-text reflections) and returns the values
+    entered, keyed by field name. `key_prefix` must be unique per
+    case_id + condition combination (e.g. "ai_EMP101" / "manual_EMP101")
+    so widget keys never collide across cases within one session.
+    """
+    st.divider()
+    st.subheader("📋 Participant Questionnaire")
+    st.caption(subject_caption + " (1 = Strongly Disagree, 5 = Strongly Agree).")
+
+    q_clarity = st.slider(
+        "Clarity — The summary is easy to understand", 1, 5, 3, key=f"{key_prefix}_clarity"
+    )
+    q_specificity = st.slider(
+        "Specificity — The summary references specific evidence", 1, 5, 3, key=f"{key_prefix}_specificity"
+    )
+    q_balance = st.slider(
+        "Balance — Fairly represents strengths and development areas", 1, 5, 3, key=f"{key_prefix}_balance"
+    )
+    q_tone = st.slider(
+        "Tone — The language is professional and appropriate", 1, 5, 3, key=f"{key_prefix}_tone"
+    )
+    q_accuracy = st.slider(
+        "Accuracy — The summary is faithful to the case evidence, without unsupported claims",
+        1, 5, 3, key=f"{key_prefix}_accuracy"
+    )
+    q_unsupported_claim = st.radio(
+        "Unsupported claim flag — Does the summary introduce any factual claim not present in the synthetic case?",
+        ["No", "Yes"],
+        index=0,
+        key=f"{key_prefix}_unsupported_claim_flag"
+    )
+    q_notes = st.text_area(
+        "Notes on unsupported claims or major omissions (optional)",
+        height=70,
+        key=f"{key_prefix}_rubric_notes"
+    )
+    q_fairness = st.slider(
+        "Fairness — The summary feels fair to the employee", 1, 5, 3, key=f"{key_prefix}_fairness"
+    )
+    q_trust = st.slider(
+        "Trust — I would trust this to inform an appraisal decision", 1, 5, 3, key=f"{key_prefix}_trust"
+    )
+    q_usefulness = st.slider(
+        "Usefulness — This step meaningfully supports me in appraisal writing",
+        1, 5, 3, key=f"{key_prefix}_usefulness"
+    )
+    q_transparency = st.slider(
+        "Transparency — It is clear to me how this summary was derived from the evidence",
+        1, 5, 3, key=f"{key_prefix}_transparency"
+    )
+    q_open_fairness = st.text_area(
+        "What made this summary feel fair or unfair?",
+        height=70,
+        key=f"{key_prefix}_open_fairness"
+    )
+    q_open_trust = st.text_area(
+        "What would increase your trust in this process?",
+        height=70,
+        key=f"{key_prefix}_open_trust"
+    )
+
+    return {
+        "clarity": q_clarity,
+        "specificity": q_specificity,
+        "balance": q_balance,
+        "tone": q_tone,
+        "accuracy": q_accuracy,
+        "unsupported_claim_flag": q_unsupported_claim,
+        "rubric_notes": q_notes,
+        "fairness": q_fairness,
+        "trust": q_trust,
+        "usefulness": q_usefulness,
+        "transparency": q_transparency,
+        "open_fairness": q_open_fairness,
+        "open_trust": q_open_trust,
+    }
+
+
+with col2:
+    if not progress["ai_done"]:
+        # --- Step 1 of 2: AI-Assisted ---
+        st.subheader("✍️ Step 1 of 2 — AI-Assisted Summary")
         st.info(
-            "**Manual Condition** — Please write your appraisal summary following the **exact same four-section structure** used by the AI. "
-            "This ensures both conditions produce comparable outputs."
+            "First, generate an AI-Assisted appraisal summary for this case, then rate it below. "
+            "You will write your own Manual summary for the same case in Step 2, straight after this."
+        )
+
+        if not api_key:
+            st.error(
+                "AI-Assisted step is temporarily unavailable (no API key configured on the server). "
+                "Please let the researcher know."
+            )
+        elif not workspace_id:
+            st.error(
+                "AI-Assisted step is temporarily unavailable because the researcher server configuration "
+                "is incomplete. Please let the researcher know."
+            )
+        else:
+            if st.button("🤖 Generate AI Summary", type="primary", use_container_width=True):
+                with st.spinner("Generating appraisal summary..."):
+                    try:
+                        client = anthropic.Anthropic(
+                            api_key=api_key,
+                            default_headers={
+                                "anthropic-workspace-id": workspace_id
+                            },
+                        )
+
+                        message = client.messages.create(
+                            model="claude-sonnet-4-6",
+                            max_tokens=1024,
+                            system=APPRAISAL_SYSTEM_PROMPT,
+                            messages=[
+                                {"role": "user", "content": build_user_prompt(case)}
+                            ],
+                        )
+                        progress["ai_output"] = message.content[0].text
+                    except Exception:
+                        st.error("AI generation is temporarily unavailable. Please inform the researcher.")
+
+            if progress["ai_output"]:
+                st.success(f"Generated draft for {case['name']}")
+
+                st.markdown("#### AI-generated draft for manager review")
+                st.markdown(
+                    "> This text is a draft based on the structured case evidence. "
+                    "> Please review it before rating it below."
+                )
+                st.markdown(progress["ai_output"])
+
+                st.caption(
+                    "Note: This prototype is designed to avoid obvious biased wording, "
+                    "but human reviewers must still check the draft for fairness and appropriateness."
+                )
+
+                answers = render_questionnaire(
+                    f"ai_{selected_case_id}",
+                    "Rate the AI-generated draft you just reviewed"
+                )
+
+                if st.button("📨 Submit AI-Assisted Ratings", use_container_width=True):
+                    ratings = {
+                        "participant_session_id": st.session_state["participant_session_id"],
+                        "case_id": case["case_id"],
+                        "employee_name": case["name"],
+                        "condition": "AI-Assisted",
+                        "summary_text": progress["ai_output"],
+                        **answers,
+                    }
+                    save_response(ratings)
+                    progress["ai_done"] = True
+                    st.success("✅ Ratings saved! Moving on to Step 2 — Manual summary for this case.")
+                    st.rerun()
+
+    elif not progress["manual_done"]:
+        # --- Step 2 of 2: Manual ---
+        st.subheader("✍️ Step 2 of 2 — Manual Summary")
+        st.info(
+            "Now write your own appraisal summary for this **same case** by hand, following the "
+            "**exact same four-section structure** used in Step 1. This ensures both steps produce "
+            "comparable outputs. The AI draft is not shown again here, so please write from your own "
+            "judgement of the evidence on the left."
         )
 
         st.markdown(
@@ -132,7 +356,7 @@ with col2:
             "Write 1–2 paragraphs summarising the year, including performance consistency and high-level interpretation of the scores and goal outcomes.",
             height=130,
             placeholder="e.g. This has been a strong year of performance...",
-            key="manual_overall",
+            key=f"manual_overall_{selected_case_id}",
         )
 
         st.markdown("### 2. Key Strengths")
@@ -140,7 +364,7 @@ with col2:
             "Use bullet points only (3–5 bullets). Each strength must be clearly linked to documented evidence (goals, scores, peer feedback, or manager notes).",
             height=150,
             placeholder="- **Technical competency:** Highest-rated competency (4.5), supported by peer feedback...\n- **Delivery and goal ownership:** ...",
-            key="manual_strengths",
+            key=f"manual_strengths_{selected_case_id}",
         )
 
         st.markdown("### 3. Development Areas")
@@ -148,7 +372,7 @@ with col2:
             "Use bullet points only (2–4 bullets). Each development area must be linked to specific evidence. If evidence is missing or unclear, say so rather than guessing.",
             height=130,
             placeholder="- **Stakeholder communication:** Manager notes specifically flag...\n- **Cross-team engagement:** Peer feedback notes...",
-            key="manual_development",
+            key=f"manual_development_{selected_case_id}",
         )
 
         st.markdown("### 4. Suggested Next-Step Focus")
@@ -156,71 +380,19 @@ with col2:
             "Write 1–2 paragraphs proposing practical next steps or focus areas for the coming period, clearly connected to the evidence and development areas above.",
             height=130,
             placeholder="Given the documented gap in stakeholder communication, a practical focus for the coming period could include...",
-            key="manual_next_steps",
+            key=f"manual_next_steps_{selected_case_id}",
         )
 
         st.caption(
             "*This draft is intended for manager review and editing and does not constitute a final appraisal decision.*"
         )
 
-        st.divider()
-        st.subheader("📋 Participant Questionnaire")
-        st.caption(
-            "Rate the summary you just wrote "
-            "(1 = Strongly Disagree, 5 = Strongly Agree)."
+        answers = render_questionnaire(
+            f"manual_{selected_case_id}",
+            "Rate the summary you just wrote"
         )
 
-        q_clarity = st.slider(
-            "Clarity — The summary is easy to understand", 1, 5, 3, key="manual_clarity"
-        )
-        q_specificity = st.slider(
-            "Specificity — The summary references specific evidence", 1, 5, 3, key="manual_specificity"
-        )
-        q_balance = st.slider(
-            "Balance — Fairly represents strengths and development areas", 1, 5, 3, key="manual_balance"
-        )
-        q_tone = st.slider(
-            "Tone — The language is professional and appropriate", 1, 5, 3, key="manual_tone"
-        )
-        q_accuracy = st.slider(
-            "Accuracy — The summary is faithful to the case evidence, without unsupported claims", 1, 5, 3, key="manual_accuracy"
-        )
-        q_unsupported_claim = st.radio(
-            "Unsupported claim flag — Does the summary introduce any factual claim not present in the synthetic case?",
-            ["No", "Yes"],
-            index=0,
-            key="manual_unsupported_claim_flag"
-        )
-        q_notes = st.text_area(
-            "Notes on unsupported claims or major omissions (optional)",
-            height=70,
-            key="manual_rubric_notes"
-        )
-        q_fairness = st.slider(
-            "Fairness — The summary feels fair to the employee", 1, 5, 3, key="manual_fairness"
-        )
-        q_trust = st.slider(
-            "Trust — I would trust this to inform an appraisal decision", 1, 5, 3, key="manual_trust"
-        )
-        q_usefulness = st.slider(
-            "Usefulness — Writing this summary this way meaningfully supports me in appraisal writing",
-            1, 5, 3, key="manual_usefulness"
-        )
-        q_transparency = st.slider(
-            "Transparency — It is clear to me how this summary was derived from the evidence", 1, 5, 3, key="manual_transparency"
-        )
-        q_open_fairness = st.text_area(
-            "What made this summary feel fair or unfair?",
-            height=70,
-            key="manual_open_fairness"
-        )
-        q_open_trust = st.text_area(
-            "What would increase your trust in this process?",
-            height=70,
-            key="manual_open_trust"
-        )
-
-        if st.button("✅ Submit Manual Summary", use_container_width=True):
+        if st.button("✅ Submit Manual Summary and Ratings", use_container_width=True):
             summary_text = f"""## Annual Performance Appraisal Summary
 **Name:** {case['name']} | **Role:** {case['role']} | **Department:** {case['department']} | **Review Period:** {case['review_period']}
 
@@ -239,163 +411,24 @@ with col2:
 *This draft is intended for manager review and editing and does not constitute a final appraisal decision.*"""
 
             ratings = {
+                "participant_session_id": st.session_state["participant_session_id"],
                 "case_id": case["case_id"],
                 "employee_name": case["name"],
                 "condition": "Manual",
                 "summary_text": summary_text,
-                "clarity": q_clarity,
-                "specificity": q_specificity,
-                "balance": q_balance,
-                "tone": q_tone,
-                "accuracy": q_accuracy,
-                "unsupported_claim_flag": q_unsupported_claim,
-                "rubric_notes": q_notes,
-                "fairness": q_fairness,
-                "trust": q_trust,
-                "usefulness": q_usefulness,
-                "transparency": q_transparency,
-                "open_fairness": q_open_fairness,
-                "open_trust": q_open_trust,
+                **answers,
             }
-
-            storage_location = save_response(ratings)
-            st.success("✅ Submitted! Thank you.")
+            save_response(ratings)
+            progress["manual_done"] = True
+            st.success("✅ Submitted! Thank you for completing this case.")
+            st.rerun()
 
     else:
-        if not api_key:
-            st.error(
-                "AI-Assisted condition is temporarily unavailable (no API key configured on the server). "
-                "Please let the researcher know, or switch to Manual condition."
-            )
-        elif not workspace_id:
-            st.error(
-                "AI_Assisted condition is temporarily unavailable because the researcher server configuration is incomplete. "
-                "Please let the researcher now, or switch to Manual condition."
-            )
-        else:
-            if st.button("🤖 Generate AI Summary", type="primary", use_container_width=True):
-                with st.spinner("Generating appraisal summary..."):
-                    try:
-                        client = anthropic.Anthropic(
-                            api_key=api_key,
-                            default_headers={
-                                "anthropic-workspace-id": workspace_id
-                            },
-                        )
-                        
-                        message = client.messages.create(
-                            model="claude-sonnet-4-6",
-                            max_tokens=1024,
-                            system=APPRAISAL_SYSTEM_PROMPT,
-                            messages=[
-                                {"role": "user", "content": build_user_prompt(case)}
-                            ],
-                        )
-                        st.session_state["last_output"] = message.content[0].text
-                        st.session_state["last_case"] = case["name"]
-                        st.session_state["last_case_id"] = case["case_id"]
-                    except Exception as e:
-                        st.error("AI generation is temporarily unavailable. Please inform the researcher.")
-
-            if "last_output" in st.session_state:
-                st.success(f"Generated draft for {st.session_state['last_case']}")
-
-                output = st.session_state["last_output"]
-
-                st.markdown("#### AI-generated draft for manager review")
-                st.markdown(
-                    "> This text is a draft based on the structured case evidence. "
-                    "> Please review and edit before using it in any appraisal document."
-                )
-
-                st.markdown(output)
-
-                st.caption(
-                    "Note: This prototype is designed to avoid obvious biased wording, "
-                    "but human reviewers must still check the draft for fairness and appropriateness."
-                )
-
-                st.divider()
-                st.subheader("📋 Participant Questionnaire")
-                st.caption(
-                    "Rate the AI-generated draft you just reviewed "
-                    "(1 = Strongly Disagree, 5 = Strongly Agree)."
-                )
-
-                q_clarity = st.slider(
-                    "Clarity — The summary is easy to understand", 1, 5, 3, key="ai_clarity"
-                )
-                q_specificity = st.slider(
-                    "Specificity — The summary references specific evidence", 1, 5, 3, key="ai_specificity"
-                )
-                q_balance = st.slider(
-                    "Balance — Fairly represents strengths and development areas", 1, 5, 3, key="ai_balance"
-                )
-                q_tone = st.slider(
-                    "Tone — The language is professional and appropriate", 1, 5, 3, key="ai_tone"
-                )
-                q_accuracy = st.slider(
-                    "Accuracy — The summary is faithful to the case evidence, without unsupported claims", 1, 5, 3, key="ai_accuracy"
-                )
-                q_unsupported_claim = st.radio(
-                    "Unsupported claim flag — Does the summary introduce any factual claim not present in the synthetic case?",
-                    ["No", "Yes"],
-                    index=0,
-                    key="ai_unsupported_claim_flag"
-                )
-                q_notes = st.text_area(
-                    "Notes on unsupported claims or major omissions (optional)",
-                    height=70,
-                    key="ai_rubric_notes"
-                )
-                q_fairness = st.slider(
-                    "Fairness — The summary feels fair to the employee", 1, 5, 3, key="ai_fairness"
-                )
-                q_trust = st.slider(
-                    "Trust — I would trust this to inform an appraisal decision", 1, 5, 3, key="ai_trust"
-                )
-                q_usefulness = st.slider(
-                    "Usefulness — This tool meaningfully supports me in writing appraisals",
-                    1, 5, 3, key="ai_usefulness"
-                )
-                q_transparency = st.slider(
-                    "Transparency — I understand how this summary was generated", 1, 5, 3, key="ai_transparency"
-                )
-                q_open_fairness = st.text_area(
-                    "What made this summary feel fair or unfair?",
-                    height=70,
-                    key="ai_open_fairness"
-                )
-                q_open_trust = st.text_area(
-                    "What would increase your trust in this tool?",
-                    height=70,
-                    key="ai_open_trust"
-                )
-
-                if st.button("📨 Submit Ratings", use_container_width=True):
-                    ratings = {
-                        "case_id": st.session_state["last_case_id"],
-                        "employee_name": st.session_state["last_case"],
-                        "condition": "AI-Assisted",
-                        "summary_text": st.session_state["last_output"],
-                        "clarity": q_clarity,
-                        "specificity": q_specificity,
-                        "balance": q_balance,
-                        "tone": q_tone,
-                        "accuracy": q_accuracy,
-                        "unsupported_claim_flag": q_unsupported_claim,
-                        "rubric_notes": q_notes,
-                        "fairness": q_fairness,
-                        "trust": q_trust,
-                        "usefulness": q_usefulness,
-                        "transparency": q_transparency,
-                        "open_fairness": q_open_fairness,
-                        "open_trust": q_open_trust,
-                    }
-
-                   
-                    storage_location = save_response(ratings)
-                    st.success("✅ Ratings saved! Thank you.")
+        st.success(
+            f"You have already completed both steps for {case['name']} ({case['case_id']}). "
+            "Select a different case above if you would like to continue, or stop here if you have "
+            "reached your minimum of one completed case."
+        )
 
 st.divider()
 st.caption(

@@ -1,7 +1,8 @@
 """
 Storage backend for the AI Appraisal Drafting Assistant.
 
-Writes each completed submission to one row in the Google Sheet.
+Writes each completed submission to one row in the Google Sheet (or to a
+local responses.csv file when no Google Sheet is configured).
 Each field is stored in a fixed column defined by FIELDNAMES.
 """
 
@@ -11,6 +12,13 @@ import os
 import streamlit as st
 
 FIELDNAMES = [
+    # Random, non-identifying code generated once per browser session
+    # (see app.py). Used only to pair a given participant's AI-Assisted
+    # and Manual responses on the same case for the within-subjects
+    # (paired) analysis in Chapter 3 -- it is NOT a name, login, or any
+    # other personally identifying value, and is never shown to anyone
+    # but the participant themselves.
+    "participant_session_id",
     "case_id",
     "employee_name",
     "condition",
@@ -54,7 +62,7 @@ def _get_worksheet():
 
     if not existing_headers:
         worksheet.update(
-            range_name="A1:Q1",
+            range_name="A1:R1",
             values=[FIELDNAMES],
             value_input_option="RAW",
         )
@@ -77,7 +85,7 @@ def save_response(ratings: dict) -> str:
             row,
             value_input_option="RAW",
             insert_data_option="INSERT_ROWS",
-            table_range="A:Q",
+            table_range="A:R",
         )
         return "Google Sheets"
 
