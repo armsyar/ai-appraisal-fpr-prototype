@@ -28,6 +28,7 @@ with st.sidebar:
     st.title("⚙️ Settings")
 
     _secret_key = st.secrets.get("ANTHROPIC_API_KEY", "")
+    workspace_id = st.secrets.get("ANTHROPIC_WORKSPACE_ID", "")
     if _secret_key:
         # A shared key is configured on the server (e.g. deployed on Streamlit
         # Community Cloud) - use it directly and never show a key field to
@@ -280,7 +281,7 @@ with col2:
                             api_key=api_key,
                             default_headers={
                                 "anthropic-workspace-id": workspace_id
-                            } if workspace_id else None,
+                            },
                         )
                         
                         message = client.messages.create(
@@ -295,7 +296,7 @@ with col2:
                         st.session_state["last_case"] = case["name"]
                         st.session_state["last_case_id"] = case["case_id"]
                     except Exception as e:
-                        st.error(f"API error: {e}")
+                        st.error("AI generation is temporarily unavailable. Please inform the researcher.")
 
             if "last_output" in st.session_state:
                 st.success(f"Generated draft for {st.session_state['last_case']}")
