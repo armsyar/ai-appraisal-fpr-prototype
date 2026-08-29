@@ -19,7 +19,7 @@ Required Streamlit secrets for the Google Sheets backend
     client_id = "..."
     token_uri = "https://oauth2.googleapis.com/token"
 
-    sheet_id = "the-id-from-your-google-sheet-url"
+    sheet_id = "1bkSg6dojxOrcz_wWFwXzdgIrlCcItUtO4j0O98lwVU0"
 """
 
 import csv
