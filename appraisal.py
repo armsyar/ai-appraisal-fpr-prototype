@@ -1,24 +1,3 @@
-"""
-appraisal.py
-
-STATUS: This file is a duplicate of app.py (the frozen prototype actually
-used to collect the 20-participant dataset reported in this FPR) with one
-addition on top: an in-app consent gate, added AFTER data collection and
-report-writing were complete.
-
-None of the 20 participants discussed in Chapters 3, 5 and 6 used this
-file or saw this consent screen — they used the original app.py, and gave
-consent informally, as disclosed in Section 3.2 and discussed as a
-limitation in Section 7.2. This file exists only to demonstrate the
-concrete, in-app fix for that gap described as a future enhancement in
-Section 6.3: a consent screen built directly into the tool, rather than
-bolted on as a separate external form. It has not been run against real
-participants and contributes no data to any result in this report.
-
-Everything below the consent gate is unchanged from app.py — same cases,
-same prompt, same questionnaire, same storage backend.
-"""
-
 import uuid
 from datetime import datetime, timezone
 
